@@ -1,0 +1,36 @@
+<aside class="sidebar">
+  <nav class="toc side-block" id="toc" hidden>
+    <div class="toc-head">
+      <h2 class="side-title">目录</h2>
+      <button class="toc-toggle" type="button" aria-expanded="true" aria-label="折叠目录"><span class="toc-chevron">▾</span></button>
+    </div>
+    <ul class="toc-list"></ul>
+  </nav>
+  <button class="toc-fab" type="button" aria-label="目录" hidden>目录</button>
+  {{#if @ size site.tags }}
+  <section class="side-block">
+    <h2 class="side-title">标签一览</h2>
+    <ul class="side-list">
+      {{#each site.tags }}
+      <li>
+        <a href="/tags/{{@ slugify @key }}/">#{{ @key }}</a>
+        <span class="side-count">{{@ size . }}</span>
+      </li>
+      {{/each }}
+    </ul>
+  </section>
+  {{/if }}
+  {{#if @ size site.categories }}
+  <section class="side-block">
+    <h2 class="side-title">分类一览</h2>
+    <ul class="side-list">
+      {{#each site.categories }}
+      <li>
+        <a href="/categories/{{@ slugify @key }}/">/{{ @key }}</a>
+        <span class="side-count">{{@ size . }}</span>
+      </li>
+      {{/each }}
+    </ul>
+  </section>
+  {{/if }}
+</aside>

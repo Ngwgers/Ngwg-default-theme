@@ -1,0 +1,20 @@
+{{> header }}
+<main class="page">
+  <h1 class="page-title">归档</h1>
+  <p class="page-subtitle">共 {{ site.posts.length }} 篇文章，安静地沉在海底。</p>
+  {{#each site.archives }}
+  <section class="archive-group">
+    <h2 class="archive-year">{{ name }}</h2>
+    <ul class="archive-list">
+      {{#each posts }}
+      <li class="archive-item">
+        <time datetime="{{ meta.date }}">{{@ formatDate meta.date "MM-DD" }}</time>
+        <a href="{{ url }}">{{ meta.title }}</a>
+      </li>
+      {{/each }}
+    </ul>
+  </section>
+  {{/each }}
+</main>
+{{> sidebar }}
+{{> footer }}

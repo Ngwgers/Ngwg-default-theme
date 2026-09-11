@@ -1,0 +1,30 @@
+{{> header }}
+<main class="page post-page">
+  <article>
+    <header class="post-header">
+      <h1 class="post-title">{{ page.meta.title }}</h1>
+      <div class="post-meta">
+        <time datetime="{{ page.meta.date }}">{{@ formatDate page.meta.date "YYYY-MM-DD" }}</time>
+        {{#if page.meta.tags }}
+        <span class="post-tags">
+          {{#each page.meta.tags }}<a class="tag" href="/tags/{{@ slugify . }}/">#{{ . }}</a> {{/each }}
+        </span>
+        {{/if }}
+        {{#if page.meta.categories }}
+        <span class="post-categories">
+          {{#each page.meta.categories }}<a class="category" href="/categories/{{@ slugify . }}/">/{{ . }}</a> {{/each }}
+        </span>
+        {{/if }}
+      </div>
+    </header>
+    <section class="post-body">
+      {{{ page.html }}}
+    </section>
+    <nav class="post-neighbors">
+      {{#if page.meta._next.meta.title }}<a class="neighbor older" href="{{ page.meta._next.url }}">← {{ page.meta._next.meta.title }}</a>{{/if }}
+      {{#if page.meta._prev.meta.title }}<a class="neighbor newer" href="{{ page.meta._prev.url }}">{{ page.meta._prev.meta.title }} →</a>{{/if }}
+    </nav>
+  </article>
+</main>
+{{> sidebar }}
+{{> footer }}

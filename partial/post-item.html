@@ -1,0 +1,16 @@
+<article class="post-item">
+  <h2 class="post-item-title"><a href="{{ url }}">{{ meta.title }}</a></h2>
+  <div class="post-item-meta">
+    <time datetime="{{ meta.date }}">{{ meta.date }}</time>
+    {{#if meta.tags }}
+    <span class="post-item-tags">
+      {{#each meta.tags }}<a class="tag" href="/tags/{{@ slugify . }}/">#{{ . }}</a> {{/each }}
+    </span>
+    {{/if }}
+  </div>
+  {{#if excerptHtml }}
+  <div class="post-item-excerpt">{{{ excerptHtml }}}</div>
+  {{else}}
+  <p class="post-item-excerpt">{{@ excerpt . 140 }}</p>
+  {{/if }}
+</article>

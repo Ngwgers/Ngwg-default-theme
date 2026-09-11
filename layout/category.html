@@ -1,0 +1,10 @@
+{{> header }}
+<main class="page">
+  <h1 class="page-title">/ {{ page.category }}</h1>
+  <p class="page-subtitle">{{ page.posts.length }} 篇文章</p>
+  <section class="post-list">
+    {{#each page.posts }}{{> post-item }}{{/each }}
+  </section>
+</main>
+{{> sidebar }}
+{{> footer }}

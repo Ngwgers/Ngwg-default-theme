@@ -1,0 +1,15 @@
+{{> header }}
+<main class="page">
+  <article>
+    {{#if page.meta.title }}
+    <header class="post-header">
+      <h1 class="post-title">{{ page.meta.title }}</h1>
+    </header>
+    {{/if }}
+    <section class="post-body">
+      {{{ page.html }}}
+    </section>
+  </article>
+</main>
+{{> sidebar }}
+{{> footer }}

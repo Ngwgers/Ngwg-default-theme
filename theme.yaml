@@ -1,0 +1,16 @@
+name: pacific
+version: 0.1.0
+description: "Ngwg default theme — quiet, cold and simple, like the Pacific."
+per_page: 10
+plugins:
+  optional:
+    # SEO extension: OpenGraph/Twitter meta, sitemap.xml, rss.xml
+    # 安装这些插件可能获得更好体验
+    seo: https://github.com/ngwg-plugins/seo.git
+layouts:
+  index: index
+  post: post
+  page: page
+  archive: archive
+  tag: tag
+  category: category
