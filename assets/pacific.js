@@ -7,12 +7,21 @@
 //      dynamic <head> tags (SEO meta) and the .layout block, with a plain
 //      opacity fade on the swapped block. Header, footer and scripts stay.
 //   4. long-post segment loading: the deployer ships only the first segment
-//      of a long article plus a .post-seg-end marker; further segments are
-//      fetched from seg/N.html as the reader approaches them.
+//      of a long article plus a .post-seg-end marker. Remaining segments are
+//      prefetched sequentially — the next request fires the moment the
+//      previous segment is parsed and inserted, the reader never waits on
+//      the network. While segments are outstanding, the TOC shows a three-dot
+//      loading indicator.
 //   The site works without JavaScript; dark mode is CSS-only.
 (function () {
   // shared dynamic-component state: replaced whenever the content swaps
-  var state = { headings: [], tocItems: [], segObserver: null };
+  var state = {
+    headings: [],
+    tocItems: [],
+    segToken: 0, // bumped on every view swap; aborts in-flight segment chains
+    sideAutoCollapsed: false,
+    lastScrollY: null,
+  };
 
   initNav();
   bindTocDocumentHandlers();
@@ -55,6 +64,7 @@
     links.addEventListener("click", function () {
       document.body.classList.remove("menu-open");
     });
+    currentKey = pageKey(location.href);
     document.addEventListener("click", function (e) {
       if (!nav.contains(e.target)) document.body.classList.remove("menu-open");
     });
@@ -65,10 +75,11 @@
   // document-level behaviours bound once; the toc element itself is replaced
   // on pjax swaps, so its own buttons re-bind in buildToc()
   function bindTocDocumentHandlers() {
+    currentKey = pageKey(location.href);
     document.addEventListener("click", function (e) {
       var openToc = document.querySelector(".toc.open");
       if (openToc && !openToc.contains(e.target) && !e.target.closest(".toc-fab")) {
-        openToc.classList.remove("open");
+        setTocOpen(false);
       }
     });
     // scroll spy: one listener, reads the current state (rebuilt after swaps)
@@ -124,16 +135,80 @@
     };
     fab.onclick = function (e) {
       e.stopPropagation();
-      toc.classList.toggle("open");
+      setTocOpen(!toc.classList.contains("open"));
     };
     toc.addEventListener("click", function (e) {
-      if (e.target.tagName === "A") toc.classList.remove("open"); // navigate & close
+      // hijack anchor clicks: the browser's fragment navigation would fire
+      // popstate (same-document navigation), and the pjax popstate path
+      // re-requests the whole page — scroll ourselves instead and keep the
+      // URL shareable via replaceState (no history entry)
+      var a = e.target && e.target.closest ? e.target.closest("a[href^='#']") : null;
+      if (a) {
+        e.preventDefault();
+        var id = decodeURIComponent(a.getAttribute("href").slice(1));
+        var target = document.getElementById(id);
+        if (target) {
+          animateScrollTo(target.getBoundingClientRect().top + window.scrollY);
+          if (history.replaceState) history.replaceState(null, "", "#" + id);
+        }
+        setTocOpen(false);
+      }
       e.stopPropagation();
     });
     spy();
   }
 
+  /** open/close the narrow-screen TOC popup, keeping the fab icon in sync */
+  function setTocOpen(open) {
+    var toc = document.getElementById("toc");
+    var fab = document.querySelector(".toc-fab");
+    if (toc) toc.classList.toggle("open", open);
+    if (fab) {
+      fab.classList.toggle("open", open);
+      fab.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+  }
+
+  // ---- collapsible sidebar lists ---------------------------------------------
+  // the toggle handler is mounted on the component itself (the .side-block
+  // element), so a pjax swap simply brings fresh components and this mounts
+  // them again — no document-level listeners to clean up
+
+  function initSideBlocks() {
+    var blocks = document.querySelectorAll(".sidebar .side-block.collapsible");
+    Array.prototype.forEach.call(blocks, function (block) {
+      var toggle = block.querySelector(".side-toggle");
+      if (!toggle) return;
+      toggle.onclick = function () {
+        var collapsed = block.classList.toggle("collapsed");
+        toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      };
+    });
+  }
+
+  /** reading view: collapse both sidebar lists on the FIRST downward scroll */
+  function autoCollapseSideBlocks() {
+    if (state.sideAutoCollapsed) return;
+    if (!document.querySelector(".post-page")) return; // not reading an article
+    var y = window.scrollY;
+    if (state.lastScrollY === null) {
+      state.lastScrollY = y;
+      return;
+    }
+    if (y > state.lastScrollY + 4 && y > 24) {
+      state.sideAutoCollapsed = true;
+      var blocks = document.querySelectorAll(".sidebar .side-block.collapsible");
+      Array.prototype.forEach.call(blocks, function (block) {
+        block.classList.add("collapsed");
+        var t = block.querySelector(".side-toggle");
+        if (t) t.setAttribute("aria-expanded", "false");
+      });
+    }
+    state.lastScrollY = y;
+  }
+
   function spy() {
+    autoCollapseSideBlocks();
     var headings = state.headings;
     var items = state.tocItems;
     if (headings.length === 0) return;
@@ -163,31 +238,38 @@
   }
 
   // ---- long-post segment loading ---------------------------------------------
+  //
+  // Remaining segments are prefetched in a sequential chain: as soon as one
+  // segment arrives and is parsed into the page, the next request fires —
+  // regardless of where the reader is. The chain is aborted by a view swap
+  // (pjax) via the segToken; a failed fetch keeps the TOC dots spinning
+  // (content remains) and a full reload recovers.
+
+  function setTocLoading(loading) {
+    var dots = document.querySelector(".toc-loading");
+    if (dots) dots.hidden = !loading;
+  }
 
   function initSegLoader() {
     var marker = document.querySelector(".post-seg-end[data-next]");
-    if (!marker || !window.IntersectionObserver) return;
-    var observer = new IntersectionObserver(
-      function (entries) {
-        if (!entries.some(function (en) { return en.isIntersecting; })) return;
-        observer.disconnect();
-        loadSegment(marker);
-      },
-      { rootMargin: "600px" },
-    );
-    observer.observe(marker);
-    state.segObserver = observer;
+    setTocLoading(!!marker);
+    if (!marker) return;
+    loadNext(marker, state.segToken);
   }
 
-  function loadSegment(marker) {
+  function loadNext(marker, token) {
     var url = marker.getAttribute("data-next");
+    if (!url) {
+      setTocLoading(false);
+      return;
+    }
     fetch(url)
       .then(function (r) {
         if (!r.ok) throw new Error(String(r.status));
         return r.text();
       })
       .then(function (frag) {
-        if (!marker.isConnected) return; // swapped away meanwhile
+        if (token !== state.segToken || !marker.isConnected) return; // view swapped meanwhile
         var tmp = document.createElement("div");
         tmp.innerHTML = frag;
         var newMarker = tmp.querySelector(".post-seg-end");
@@ -195,7 +277,10 @@
         marker.insertAdjacentHTML("beforebegin", tmp.innerHTML);
         if (newMarker) marker.replaceWith(newMarker);
         else marker.remove();
-        refreshDynamic(); // new headings for the TOC, new marker for the observer
+        buildToc(); // the TOC grows with the arriving sections
+        spy();
+        if (newMarker) loadNext(newMarker, token); // next fetch starts right away
+        else setTocLoading(false); // article complete
       })
       .catch(function () {
         /* network trouble: keep what we have; a reload fetches the full page */
@@ -205,9 +290,11 @@
   // ---- re-init everything that lives inside the swapped block -----------------
 
   function refreshDynamic() {
-    if (state.segObserver) state.segObserver.disconnect();
-    state.segObserver = null;
+    state.segToken++; // abort any in-flight segment chain from the old view
+    state.sideAutoCollapsed = false;
+    state.lastScrollY = null;
     buildToc();
+    initSideBlocks();
     initSegLoader();
     spy();
   }
@@ -217,6 +304,7 @@
   var PJAX_FADE_MS = 180;
   var navToken = 0;
   var scrollMemo = {};
+  var currentKey = null; // pathname+search of the currently shown page
 
   function pageKey(url) {
     return new URL(url, location.href).pathname + new URL(url, location.href).search;
@@ -226,6 +314,7 @@
     if (!window.fetch || !window.history || !window.DOMParser) return;
     if (window.history.scrollRestoration) history.scrollRestoration = "manual";
 
+    currentKey = pageKey(location.href);
     document.addEventListener("click", function (e) {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       var a = e.target.closest ? e.target.closest("a") : null;
@@ -239,7 +328,15 @@
     });
 
     window.addEventListener("popstate", function () {
-      navigate(location.href, false, scrollMemo[pageKey(location.href)] || 0);
+      var key = pageKey(location.href);
+      if (key === currentKey) {
+        // hash-only traversal (e.g. a legacy fragment entry): scroll, never
+        // re-request the document
+        scrollToHash();
+        return;
+      }
+      currentKey = key;
+      navigate(location.href, false, scrollMemo[key] || 0);
     });
   }
 
@@ -257,8 +354,37 @@
     });
   }
 
+  /** jump to the fragment in the current URL, if any */
+  function scrollToHash() {
+    var id = decodeURIComponent(location.hash.slice(1));
+    if (!id) return;
+    var target = document.getElementById(id);
+    if (target) animateScrollTo(target.getBoundingClientRect().top + window.scrollY);
+  }
+
+  // 0.25s eased scroll — the same motion the collapse/expand animation uses
+  var SCROLL_MS = 250;
+  var scrollToken = 0;
+  function animateScrollTo(targetY) {
+    var token = ++scrollToken;
+    var startY = window.scrollY;
+    var delta = targetY - startY;
+    if (Math.abs(delta) < 1) return;
+    var start = null;
+    function step(ts) {
+      if (token !== scrollToken) return; // a newer scroll took over
+      if (start === null) start = ts;
+      var t = Math.min((ts - start) / SCROLL_MS, 1);
+      var eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad
+      window.scrollTo(0, startY + delta * eased);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
   function navigate(url, push, restoreScroll) {
     var token = ++navToken;
+    currentKey = pageKey(url);
     var layout = document.querySelector(".layout");
     if (layout) layout.classList.add("pjax-fade"); // fade out
 

@@ -122,7 +122,6 @@ a:hover { border-bottom-color: currentColor; }
   height: 2px;
   width: 100%;
   background: var(--ink-soft);
-  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 body.nav-crowded .nav-toggle { display: flex; }
@@ -177,8 +176,6 @@ body.nav-crowded .site-links a:last-child { border-bottom: none; }
   padding-left: 1.8rem;
   position: sticky;
   top: 1.4rem;
-  max-height: calc(100vh - 2.8rem);
-  overflow-y: auto;
 }
 
 .side-block { margin-bottom: 2rem; }
@@ -213,6 +210,40 @@ body.nav-crowded .site-links a:last-child { border-bottom: none; }
   font-variant-numeric: tabular-nums;
 }
 
+/* collapsible sidebar lists: the toggle is part of the component, so a pjax
+   swap brings fresh components and the JS simply re-mounts them */
+.side-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0 0.2rem 0 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+  text-align: left;
+  cursor: pointer;
+}
+.side-toggle:hover { color: var(--accent); }
+
+.side-chevron {
+  display: inline-flex;
+}
+
+.side-chevron svg,
+.toc-chevron svg {
+  display: block;
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.side-block.collapsed .side-chevron { transform: rotate(-90deg); }
+
 /* ---- table of contents ---- */
 
 .toc[hidden], .toc-fab[hidden] { display: none !important; }
@@ -235,15 +266,53 @@ body.nav-crowded .site-links a:last-child { border-bottom: none; }
 }
 .toc-toggle:hover { color: var(--accent); }
 
-.toc.collapsed .toc-list { display: none; }
+.toc-chevron {
+  display: inline-flex;
+}
+
 .toc.collapsed .toc-chevron { display: inline-block; transform: rotate(-90deg); }
+
+/* collapse/expand animation: a grid row interpolating 1fr ↔ 0fr slides the
+   list shut; the class lives on the component itself */
+.collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.25s ease;
+}
+.collapse > ul { min-height: 0; overflow: hidden; }
+.collapsed .collapse { grid-template-rows: 0fr; }
+
+/* three-dot loading indicator: long articles stream their remaining segments
+   in the background; the dots sit at the bottom of the TOC until it is done */
+.toc-loading {
+  display: flex;
+  gap: 0.32rem;
+  padding: 0.6rem 0 0.1rem 0.8rem;
+}
+.toc-loading[hidden] { display: none; }
+.toc-loading span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--ink-faint);
+  animation: toc-dot 1.1s ease-in-out infinite;
+}
+.toc-loading span:nth-child(2) { animation-delay: 0.18s; }
+.toc-loading span:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes toc-dot {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
 
 .toc-list {
   list-style: none;
   margin: 0.5rem 0 0;
   padding: 0;
   border-left: 2px solid var(--line);
+  transition: margin 0.25s ease;
 }
+.toc.collapsed .toc-list { margin-top: 0; }
 
 .toc-item a {
   display: block;
@@ -266,26 +335,62 @@ body.nav-crowded .site-links a:last-child { border-bottom: none; }
   border-left-color: var(--accent);
 }
 
-/* floating button (narrow viewports) */
+/* floating button (narrow viewports): three bars that morph into a scroll —
+   the top and bottom bars rotate upright to the sides, the middle one
+   duplicates into three text lines (like a rolled-up paper) */
 .toc-fab {
   display: none;
   position: fixed;
   right: 1.1rem;
   bottom: 1.4rem;
   z-index: 40;
+  width: 2.34rem;
+  height: 2.34rem;
   border: none;
-  border-radius: 999px;
-  padding: 0.55rem 1.05rem;
   background: var(--accent);
-  color: var(--bg);
-  font-size: 0.9rem;
-  font-family: inherit;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(20, 40, 50, 0.25);
 }
 
+.toc-fab span {
+  position: absolute;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--bg);
+}
+
+/* three bars */
+.toc-fab span:nth-child(1) { left: 20%; width: 60%; top: 30%; }
+.toc-fab span:nth-child(2) { left: 20%; width: 60%; top: calc(50% - 1px); }
+.toc-fab span:nth-child(3) { left: 20%; width: 60%; top: calc(70% - 2px); }
+
+/* the middle bar carries its two copies (hidden until the morph) */
+.toc-fab span:nth-child(2)::before,
+.toc-fab span:nth-child(2)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--bg);
+  opacity: 0;
+  transform: scaleY(0);
+}
+.toc-fab span:nth-child(2)::before { top: -7px; }
+.toc-fab span:nth-child(2)::after { top: 7px; }
+
+/* scroll: upright side rolls + three text lines */
+.toc-fab.open span:nth-child(1) { left: 18%; width: 2px; top: 15%; height: 70%; }
+.toc-fab.open span:nth-child(3) { left: calc(82% - 2px); width: 2px; top: 15%; height: 70%; }
+.toc-fab.open span:nth-child(2) { left: 30%; width: 40%; }
+.toc-fab.open span:nth-child(2)::before,
+.toc-fab.open span:nth-child(2)::after { opacity: 1; transform: scaleY(1); }
+
 @media (max-width: 56rem) {
-  .layout { grid-template-columns: 1fr; gap: 2.4rem; }
+  /* minmax(0, 1fr): the track must not grow to a wide child's min-content
+     (long code lines) — overflow stays inside scrollable blocks instead */
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 2.4rem; }
   .sidebar {
     order: 2;
     border-left: none;
@@ -297,10 +402,12 @@ body.nav-crowded .site-links a:last-child { border-bottom: none; }
     gap: 1.6rem;
   }
   .side-block { margin-bottom: 0; }
-  .page { margin: 0 auto; }
+  /* no auto margins here: they switch the grid item to fit-content sizing,
+     whose min-content floor (long code lines) re-creates horizontal overflow */
+  .page { margin: 0; }
 
   /* the TOC leaves the sidebar flow: floating button + popup panel */
-  .toc-fab { display: flex; }
+  .toc-fab { display: block; }
   .toc {
     position: fixed;
     left: 1rem;
