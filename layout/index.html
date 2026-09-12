@@ -5,9 +5,9 @@
   </section>
   {{#if page.pagination }}
   <nav class="pagination">
-    {{#if page.pagination.prev }}<a class="pagination-newer" href="{{ page.pagination.prev }}">← 较新</a>{{/if }}
+    {{#if page.pagination.prev }}<a class="pagination-newer" href="{{ page.pagination.prev }}">← {{ t.pagination.newer }}</a>{{/if }}
     <span class="pagination-info">{{ page.pagination.current }} / {{ page.pagination.total }}</span>
-    {{#if page.pagination.next }}<a class="pagination-older" href="{{ page.pagination.next }}">较旧 →</a>{{/if }}
+    {{#if page.pagination.next }}<a class="pagination-older" href="{{ page.pagination.next }}">{{ t.pagination.older }} →</a>{{/if }}
   </nav>
   {{/if }}
 </main>

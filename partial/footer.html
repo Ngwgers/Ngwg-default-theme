@@ -2,7 +2,7 @@
 <footer class="site-footer">
   <p>{{ site.title }} — {{ site.description }}</p>
   <p>
-    由 <a href="https://github.com/ngwg" rel="noopener">Ngwg</a> + <a href="https://github.com/ngwg/pacific">Pacific</a> 生成 {{#if site.extra.seo.generateRSS }} · <a href="{{ site.extra.seo.rssPath }}">RSS</a>{{/if }}{{#if site.extra.seo.generateSitemap }} · <a href="{{ site.extra.seo.sitemapPath }}">Sitemap</a>{{/if }}
+    {{ t.footer.by_prefix }} <a href="https://github.com/Ngwgers" rel="noopener">Ngwg</a> + <a href="https://github.com/Ngwgers/Ngwg-default-theme">Pacific</a>{{ t.footer.by_suffix }} {{#if site.extra.seo.generateRSS }} · <a href="{{ site.extra.seo.rssPath }}">RSS</a>{{/if }}{{#if site.extra.seo.generateSitemap }} · <a href="{{ site.extra.seo.sitemapPath }}">Sitemap</a>{{/if }}
   </p>
 </footer>
 <script src="/assets/pacific.js"></script>
