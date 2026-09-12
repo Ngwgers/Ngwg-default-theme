@@ -297,6 +297,7 @@ body.nav-crowded .site-links a:last-child { border-bottom: none; }
     gap: 1.6rem;
   }
   .side-block { margin-bottom: 0; }
+  .page { margin: 0 auto; }
 
   /* the TOC leaves the sidebar flow: floating button + popup panel */
   .toc-fab { display: flex; }
