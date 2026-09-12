@@ -1,5 +1,5 @@
 name: pacific
-version: 0.1.0
+version: 0.2.0
 description: "Ngwg default theme — quiet, cold and simple, like the Pacific."
 per_page: 10
 # language used when the user sets neither `language` (ngwg.yaml) nor $NGWG_LANG —
