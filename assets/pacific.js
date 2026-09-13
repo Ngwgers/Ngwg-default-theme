@@ -382,9 +382,25 @@
     requestAnimationFrame(step);
   }
 
+  /** 2x three-dot loader over the content area while a page is fetched */
+  function showPageLoading() {
+    if (document.querySelector(".page-loading")) return;
+    var el = document.createElement("div");
+    el.className = "page-loading";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = "<span></span><span></span><span></span>";
+    document.body.appendChild(el);
+  }
+
+  function hidePageLoading() {
+    var el = document.querySelector(".page-loading");
+    if (el) el.remove();
+  }
+
   function navigate(url, push, restoreScroll) {
     var token = ++navToken;
     currentKey = pageKey(url);
+    showPageLoading();
     var layout = document.querySelector(".layout");
     if (layout) layout.classList.add("pjax-fade"); // fade out
 
@@ -398,7 +414,8 @@
 
     Promise.all([fetching, faded])
       .then(function (results) {
-        if (token !== navToken) return; // a newer navigation won
+        if (token !== navToken) return; // a newer navigation won (it owns the loader)
+        hidePageLoading(); // the swap itself replaces the loading position
         var doc = new DOMParser().parseFromString(results[0], "text/html");
         var next = doc.querySelector(".layout");
         var current = document.querySelector(".layout");
@@ -417,6 +434,7 @@
       })
       .catch(function () {
         if (token !== navToken) return;
+        hidePageLoading();
         location.href = url; // pjax failed — fall back to a full load
       });
   }
