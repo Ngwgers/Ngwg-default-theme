@@ -450,9 +450,7 @@ body.nav-crowded .site-links a:last-child { border-bottom: none; }
     gap: 1.6rem;
   }
   .side-block { margin-bottom: 0; }
-  /* no auto margins here: they switch the grid item to fit-content sizing,
-     whose min-content floor (long code lines) re-creates horizontal overflow */
-  .page { margin: 0; }
+  .page { margin: 0 auto; }
 
   /* the TOC leaves the sidebar flow: floating button + popup panel */
   .toc-fab { display: block; }
