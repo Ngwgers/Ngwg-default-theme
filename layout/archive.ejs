@@ -1,0 +1,20 @@
+<%- include('header') %>
+<main class="page">
+  <h1 class="page-title"><%= t.archive.title %></h1>
+  <p class="page-subtitle"><%= h.t("archive.subtitle", site.posts.length) %></p>
+  <% for (const group of site.archives) { %>
+  <section class="archive-group">
+    <h2 class="archive-year"><%= group.name %></h2>
+    <ul class="archive-list">
+      <% for (const post of group.posts) { %>
+      <li class="archive-item">
+        <time datetime="<%= post.meta.date %>"><%= h.formatDate(post.meta.date, "MM-DD") %></time>
+        <a href="<%= post.url %>"><%= post.meta.title %></a>
+      </li>
+      <% } %>
+    </ul>
+  </section>
+  <% } %>
+</main>
+<%- include('sidebar') %>
+<%- include('footer') %>

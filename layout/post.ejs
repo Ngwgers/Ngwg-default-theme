@@ -1,0 +1,30 @@
+<%- include('header') %>
+<main class="page post-page">
+  <article>
+    <header class="post-header">
+      <h1 class="post-title"><%= page.meta.title %></h1>
+      <div class="post-meta">
+        <time datetime="<%= page.meta.date %>"><%= h.formatDate(page.meta.date, "YYYY-MM-DD") %></time>
+        <% if (page.meta.tags && page.meta.tags.length) { %>
+        <span class="post-tags">
+          <% for (const tag of page.meta.tags) { %><a class="tag" href="/tags/<%= h.slugify(tag) %>/">#<%= tag %></a> <% } %>
+        </span>
+        <% } %>
+        <% if (page.meta.categories && page.meta.categories.length) { %>
+        <span class="post-categories">
+          <% for (const cat of page.meta.categories) { %><a class="category" href="/categories/<%= h.slugify(cat) %>/">/<%= cat %></a> <% } %>
+        </span>
+        <% } %>
+      </div>
+    </header>
+    <section class="post-body">
+      <%- page.html %>
+    </section>
+    <nav class="post-neighbors">
+      <% if (page.meta._next && page.meta._next.meta.title) { %><a class="neighbor older" href="<%= page.meta._next.url %>">← <%= page.meta._next.meta.title %></a><% } %>
+      <% if (page.meta._prev && page.meta._prev.meta.title) { %><a class="neighbor newer" href="<%= page.meta._prev.url %>"><%= page.meta._prev.meta.title %> →</a><% } %>
+    </nav>
+  </article>
+</main>
+<%- include('sidebar') %>
+<%- include('footer') %>
