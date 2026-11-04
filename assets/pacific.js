@@ -278,6 +278,10 @@
         if (newMarker) marker.replaceWith(newMarker);
         else marker.remove();
         buildToc(); // the TOC grows with the arriving sections
+        // fragments can carry tab containers and mermaid diagrams: wire the
+        // freshly spliced content up like the first segment was
+        initTabs();
+        initMermaid();
         spy();
         if (newMarker) loadNext(newMarker, token); // next fetch starts right away
         else setTocLoading(false); // article complete
@@ -324,10 +328,12 @@
       buttons.forEach(function (button, index) {
         button.addEventListener("click", function () {
           activateTabs(buttons, panels, index);
-          var id = button.dataset.id || wrapper.dataset.id;
-          if (id) {
-            tabGroups[id] = index;
-            syncTabGroup(id);
+          var groupId = wrapper.dataset.id;
+          if (groupId) {
+            // the container id is the shared group; a tab value id (if
+            // present) names the active tab, otherwise the index is shared
+            tabGroups[groupId] = button.dataset.id !== undefined ? button.dataset.id : index;
+            syncTabGroup(groupId);
           }
         });
       });
@@ -343,13 +349,22 @@
   }
 
   function syncTabId(wrapper) {
-    var id = wrapper.dataset.id;
-    if (id === undefined || tabGroups[id] === undefined) return;
+    var groupId = wrapper.dataset.id;
+    var shared = tabGroups[groupId];
+    if (shared === undefined) return;
     var buttons = slice(wrapper.querySelectorAll(".tabs-tab-button"));
     var panels = slice(wrapper.querySelectorAll(".tabs-tab-content"));
     if (!buttons.length) return;
-    var usesIds = buttons.some(function (b) { return b.dataset.id !== undefined; });
-    activateTabs(buttons, panels, usesIds ? tabGroups[id] : Math.min(tabGroups[id], buttons.length - 1));
+    // tab value ids sync by value; plain containers sync by index, clamped
+    var index = typeof shared === "string"
+      ? -1
+      : Math.min(shared, buttons.length - 1);
+    if (typeof shared === "string") {
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].dataset.id === shared) { index = i; break; }
+      }
+    }
+    if (index >= 0) activateTabs(buttons, panels, index);
   }
 
   function activateTabs(buttons, panels, index) {
