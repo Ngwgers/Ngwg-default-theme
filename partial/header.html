@@ -9,6 +9,7 @@
   {{#if @ size site.extra.seo }}{{{ @ seoMeta page site }}}{{/if }}
   {{#if site.extra.seo.generateRSS }}<link rel="alternate" type="application/rss+xml" title="{{ site.title }}" href="{{ site.extra.seo.rssPath }}">{{/if }}
   {{#if site.extra.seo.generateAtom }}<link rel="alternate" type="application/atom+xml" title="{{ site.title }}" href="{{ site.extra.seo.atomPath }}">{{/if }}
+  {{#if site.extra.markdown.tex.katex }}<link rel="stylesheet" href="/assets/katex/katex.min.css">{{/if }}
 </head>
 <body>
 <header class="site-header">

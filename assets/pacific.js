@@ -296,7 +296,96 @@
     buildToc();
     initSideBlocks();
     initSegLoader();
+    initTabs();
+    initMermaid();
     spy();
+  }
+
+  // ---- tab containers (@mdit/plugin-tab output) ------------------------------
+  // Buttons carry data-tab="<index>", panels data-index; a shared container id
+  // (`::: tabs#fruit`) keeps every container with that id on the same tab.
+  var tabGroups = {};
+
+  function initTabs() {
+    var wrappers = document.querySelectorAll(".tabs-tabs-wrapper");
+    Array.prototype.forEach.call(wrappers, function (wrapper) {
+      if (wrapper.dataset.tabsInit) return;
+      wrapper.dataset.tabsInit = "1";
+      var buttons = slice(wrapper.querySelectorAll(".tabs-tab-button"));
+      var panels = slice(wrapper.querySelectorAll(".tabs-tab-content"));
+      if (!buttons.length) return;
+
+      var active = 0;
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].classList.contains("active")) { active = i; break; }
+      }
+      activateTabs(buttons, panels, active);
+
+      buttons.forEach(function (button, index) {
+        button.addEventListener("click", function () {
+          activateTabs(buttons, panels, index);
+          var id = button.dataset.id || wrapper.dataset.id;
+          if (id) {
+            tabGroups[id] = index;
+            syncTabGroup(id);
+          }
+        });
+      });
+
+      if (wrapper.dataset.id && tabGroups[wrapper.dataset.id] !== undefined) syncTabId(wrapper);
+    });
+  }
+
+  function syncTabGroup(id) {
+    Array.prototype.forEach.call(document.querySelectorAll('.tabs-tabs-wrapper[data-id="' + id + '"]'), function (wrapper) {
+      syncTabId(wrapper);
+    });
+  }
+
+  function syncTabId(wrapper) {
+    var id = wrapper.dataset.id;
+    if (id === undefined || tabGroups[id] === undefined) return;
+    var buttons = slice(wrapper.querySelectorAll(".tabs-tab-button"));
+    var panels = slice(wrapper.querySelectorAll(".tabs-tab-content"));
+    if (!buttons.length) return;
+    var usesIds = buttons.some(function (b) { return b.dataset.id !== undefined; });
+    activateTabs(buttons, panels, usesIds ? tabGroups[id] : Math.min(tabGroups[id], buttons.length - 1));
+  }
+
+  function activateTabs(buttons, panels, index) {
+    buttons.forEach(function (b, i) { b.classList.toggle("active", i === index); });
+    panels.forEach(function (p, i) { p.classList.toggle("active", i === index); });
+  }
+
+  // ---- mermaid diagrams -------------------------------------------------------
+  // The renderer ships `<pre class="mermaid">source</pre>`; the runtime bundle
+  // is copied to /assets/mermaid/mermaid.min.js by the files plugin when any
+  // page contains a diagram.
+  function initMermaid() {
+    var nodes = slice(document.querySelectorAll(".mermaid")).filter(function (el) {
+      return !el.dataset.processed;
+    });
+    if (!nodes.length) return;
+
+    var run = function () {
+      if (!window.mermaid) return;
+      window.mermaid.initialize({ startOnLoad: false });
+      window.mermaid.run({ nodes: nodes }).catch(function () {});
+    };
+
+    if (window.mermaid) return run();
+    var script = document.getElementById("mermaid-runtime");
+    if (!script) {
+      script = document.createElement("script");
+      script.id = "mermaid-runtime";
+      script.src = "/assets/mermaid/mermaid.min.js";
+      document.head.appendChild(script);
+    }
+    script.addEventListener("load", run, { once: true });
+  }
+
+  function slice(list) {
+    return Array.prototype.slice.call(list);
   }
 
   // ---- pjax -------------------------------------------------------------------
