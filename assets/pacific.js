@@ -22,6 +22,7 @@
     sideAutoCollapsed: false,
     lastScrollY: null,
   };
+  var tabGroups = {};
 
   initNav();
   bindTocDocumentHandlers();
@@ -308,8 +309,6 @@
   // ---- tab containers (@mdit/plugin-tab output) ------------------------------
   // Buttons carry data-tab="<index>", panels data-index; a shared container id
   // (`::: tabs#fruit`) keeps every container with that id on the same tab.
-  var tabGroups = {};
-
   function initTabs() {
     var wrappers = document.querySelectorAll(".tabs-tabs-wrapper");
     Array.prototype.forEach.call(wrappers, function (wrapper) {
